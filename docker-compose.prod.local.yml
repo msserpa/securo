@@ -1,0 +1,34 @@
+# Override LOCAL de build — usado junto com docker-compose.prod.yml para buildar
+# as imagens a partir do código-fonte no host (em vez de puxar do GHCR, que não
+# publica :latest). Mantém o prod.yml original limpo (image: GHCR) para PR upstream.
+#
+# Uso (o deploy.sh já faz isso):
+#   docker compose -f docker-compose.prod.yml -f docker-compose.prod.local.yml up -d --build
+#
+# Este arquivo é gitignored — é infra de deploy local, não vai pro upstream.
+#
+# IMPORTANTE: backend, celery-worker, celery-beat e mcp-server TODOS herdam
+# <<: *backend-base (image GHCR). Cada um precisa ser apontado para a imagem
+# local, senão o `up` tenta puxar :latest do GHCR (404/denied). Só o backend
+# carrega o build:; os demais reusam securo-backend:local.
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: securo-backend:local
+
+  celery-worker:
+    image: securo-backend:local
+
+  celery-beat:
+    image: securo-backend:local
+
+  mcp-server:
+    image: securo-backend:local
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: securo-frontend:local

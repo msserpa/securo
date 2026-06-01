@@ -16,3 +16,6 @@ docker-compose.override.yml
 # downloaded ONNX embedding models, transaction attachments). User data
 # — never commit.
 backend/data/
+
+# Deploy local (rsync + build no host) — não vai pro upstream
+docker-compose.prod.local.yml

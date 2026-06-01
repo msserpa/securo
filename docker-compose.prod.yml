@@ -40,6 +40,7 @@ x-backend-env: &backend-env
   REDIS_URL: redis://redis:6379/0
   STORAGE_LOCAL_PATH: /app/data/attachments
   AGENTS_KNOWLEDGE_STORAGE_PATH: /app/data/agent_knowledge
+  AGENTS_EMBEDDING_NATIVE_CACHE_DIR: /app/data/embedding_models
   # Agents/LLM feature — opt-in. Off by default so existing users pay
   # zero cost. Run `docker compose -f docker-compose.prod.yml --profile
   # agents up` after enabling.
@@ -63,6 +64,7 @@ x-backend-env: &backend-env
   # ollama/openai/openai_compatible for better quality.
   AGENTS_EMBEDDING_PROVIDER: ${AGENTS_EMBEDDING_PROVIDER:-native}
   AGENTS_EMBEDDING_MODEL: ${AGENTS_EMBEDDING_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
+  AGENTS_EMBEDDING_OPENAI_API_KEY: ${AGENTS_EMBEDDING_OPENAI_API_KEY:-}
 
 x-backend-base: &backend-base
   image: ghcr.io/securo-finance/securo-backend:latest
@@ -109,15 +111,15 @@ services:
     <<: *backend-base
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"   # bind local; acesso via túnel ssh
 
   frontend:
     image: ghcr.io/securo-finance/securo-frontend:latest
     ports:
-      - "${FRONTEND_PORT:-3000}:8080"
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:8080"   # bind local; acesso via túnel ssh
     environment:
       BACKEND_URL: http://backend:8000
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     depends_on:
       - backend
     restart: unless-stopped
