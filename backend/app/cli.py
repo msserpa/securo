@@ -59,6 +59,47 @@ async def create_user(email: str, password: str) -> None:
         print(f"User created successfully: {email}")
 
 
+async def seed_grao_plan(email: str) -> None:
+    """Seed the Grão-style categories + recurring budgets for an existing user.
+
+    Idempotent — safe to run on a workspace that already has some of the
+    categories/budgets. Used to backfill the plan for a user created before
+    the seed existed (the auto-seed in create_default_categories only runs for
+    brand-new workspaces).
+    """
+    from app.models.workspace import Workspace, WorkspaceMember
+    from app.services.category_group_service import create_default_groups
+    from app.services.grao_plan_seed import (
+        create_grao_categories,
+        seed_grao_plan_budgets,
+    )
+
+    async with async_session_maker() as session:
+        user = (
+            await session.execute(select(User).where(User.email == email))
+        ).scalar_one_or_none()
+        if user is None:
+            print(f"Error: no user with email '{email}'.")
+            sys.exit(1)
+
+        ws_id = (
+            await session.execute(
+                select(Workspace.id)
+                .join(WorkspaceMember, WorkspaceMember.workspace_id == Workspace.id)
+                .where(WorkspaceMember.user_id == user.id)
+                .limit(1)
+            )
+        ).scalar()
+        if ws_id is None:
+            print(f"Error: user '{email}' has no workspace.")
+            sys.exit(1)
+
+        groups = await create_default_groups(session, user.id, "pt-BR", workspace_id=ws_id)
+        await create_grao_categories(session, user.id, ws_id, groups)
+        created = await seed_grao_plan_budgets(session, user.id, ws_id)
+        print(f"Grão plan seeded for {email}: {created} recurring budgets created.")
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         print("Usage:")
@@ -75,9 +116,14 @@ def main() -> None:
         asyncio.run(create_user(email, password))
     elif command == "generate-recurring":
         asyncio.run(generate_recurring())
+    elif command == "seed-grao-plan":
+        if len(sys.argv) != 3:
+            print("Usage: python -m app.cli seed-grao-plan <email>")
+            sys.exit(1)
+        asyncio.run(seed_grao_plan(sys.argv[2]))
     else:
         print(f"Unknown command: {command}")
-        print("Available commands: create-user, generate-recurring")
+        print("Available commands: create-user, generate-recurring, seed-grao-plan")
         sys.exit(1)
 
 

@@ -87,7 +87,23 @@ async def create_default_categories(
         )
         session.add(category)
         categories.append(category)
+
     await session.commit()
+
+    # Grão plan extras (single-user fork): the user's extra expense categories
+    # (Viagens, Restaurantes, Seguros, ...) plus a recurring monthly target per
+    # category. Workspace-scoped only — the legacy no-workspace path is used by
+    # old tests/fixtures and stays on the base 16 defaults. Idempotent. See
+    # app/services/grao_plan_seed.py.
+    if workspace_id is not None:
+        from app.services.grao_plan_seed import (
+            create_grao_categories,
+            seed_grao_plan_budgets,
+        )
+        await create_grao_categories(session, user_id, workspace_id, groups)
+        await seed_grao_plan_budgets(session, user_id, workspace_id)
+        return await get_categories(session, workspace_id)
+
     return categories
 
 
