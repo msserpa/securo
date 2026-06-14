@@ -100,8 +100,12 @@ async def create_default_categories(
             create_grao_categories,
             seed_grao_plan_budgets,
         )
+        from app.services.grao_rules_seed import seed_grao_rules
         await create_grao_categories(session, user_id, workspace_id, groups)
         await seed_grao_plan_budgets(session, user_id, workspace_id)
+        # Merchant categorization rules from the Grão history — auto-classify
+        # future transactions. Runs after categories exist. Idempotent.
+        await seed_grao_rules(session, user_id, workspace_id)
         return await get_categories(session, workspace_id)
 
     return categories

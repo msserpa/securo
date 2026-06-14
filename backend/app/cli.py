@@ -73,6 +73,7 @@ async def seed_grao_plan(email: str) -> None:
         create_grao_categories,
         seed_grao_plan_budgets,
     )
+    from app.services.grao_rules_seed import seed_grao_rules
 
     async with async_session_maker() as session:
         user = (
@@ -97,7 +98,11 @@ async def seed_grao_plan(email: str) -> None:
         groups = await create_default_groups(session, user.id, "pt-BR", workspace_id=ws_id)
         await create_grao_categories(session, user.id, ws_id, groups)
         created = await seed_grao_plan_budgets(session, user.id, ws_id)
-        print(f"Grão plan seeded for {email}: {created} recurring budgets created.")
+        rules = await seed_grao_rules(session, user.id, ws_id)
+        print(
+            f"Grão plan seeded for {email}: {created} recurring budgets, "
+            f"{rules} categorization rules."
+        )
 
 
 def main() -> None:
