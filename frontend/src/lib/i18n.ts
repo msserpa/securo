@@ -12,6 +12,17 @@ function syncHtmlLang(lng: string) {
   document.documentElement.lang = lng
 }
 
+// Read a previously persisted language choice (the key i18next-browser-
+// languagedetector writes to when caches includes 'localStorage'). Returns
+// undefined when the user has never chosen — letting the pt-BR default apply.
+function storedLanguage(): string | undefined {
+  try {
+    return localStorage.getItem('i18nextLng') ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -24,10 +35,11 @@ i18n
       it: { translation: it },
     },
     fallbackLng: 'en',
-    // English is the default. Honour an explicit, persisted choice
-    // (querystring/localStorage/cookie) but do NOT auto-pick the browser
-    // language — otherwise a pt-BR/es-* browser would override the English
-    // default before the user ever chooses.
+    // Portuguese (pt-BR) is this fork's default. Honour an explicit, persisted
+    // choice (querystring/localStorage/cookie) but do NOT auto-pick the browser
+    // language — so a user who picked English keeps it. When nothing is stored,
+    // the detector returns no language and i18next applies `lng` below.
+    lng: storedLanguage() ?? 'pt-BR',
     detection: {
       order: ['querystring', 'localStorage', 'cookie'],
       caches: ['localStorage'],
